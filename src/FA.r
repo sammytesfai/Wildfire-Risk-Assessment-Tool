@@ -26,6 +26,28 @@ colnames(CD.data) <- c('lat', 'long', 'yr', 'mon', 'day', 'hr', 'temp', 'rh',
                        'ws', 'prec')
 
 
-# Getting FWI using hourly dataset for Coastal Dairies using default values for
-# ffmc, dmc, and dc
-cd.fwi <- fwi(CD.data)
+# Get Fine Fuel Mositure code for all hours in January except Jan 17 @1400
+ffmc.o = c()
+for(i in 1:(nrow(CD.data) - 1))
+{
+  if(i == 1)
+  {
+    ffmc.o[i] <- hffmc(CD.data[i,]) 
+  }
+  else
+  {
+    ffmc.o[i] <- hffmc(CD.data[i,], ffmc_old = ffmc.o[i-1])
+  }
+}
+
+# Obtain FFMC for Jan 17th @ 1400 given previous hours FFMC
+cd.hffmc <- hffmc(CD.data[nrow(CD.data),], ffmc.o[i])
+
+# Getting Fire Weather Index for hour 1400 using FFMC derived above as well 
+# as the same dataset
+cd.fwi <- fwi(CD.data[nrow((CD.data)),], 
+              init = data.frame(ffmc = cd.hffmc, dmc = 6, dc = 15, lat = 55))
+cd.fwi
+
+fwi(CD.data)
+hffmc(CD.data,hourlyFWI = FALSE)
