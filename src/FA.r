@@ -47,7 +47,4 @@ cd.hffmc <- hffmc(CD.data[nrow(CD.data),], ffmc.o[i])
 # as the same dataset
 cd.fwi <- fwi(CD.data[nrow((CD.data)),], 
               init = data.frame(ffmc = cd.hffmc, dmc = 6, dc = 15, lat = 55))
-cd.fwi
-
-fwi(CD.data)
-hffmc(CD.data,hourlyFWI = FALSE)
+cd.fwi$FWI
