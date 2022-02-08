@@ -6,45 +6,53 @@ if(!("cffdrs" %in% installed.packages()))
 install.packages("cron")
 library(cffdrs)
 
-# Read in dataset from Coastal Dairies Weather station 
-CD.Jan.hourly <- read.delim("data/Coast_Dairies_Jan_hourly_dataset", sep = ",")
+setwd("C:/Users/sammy/OneDrive/Desktop/Wildfire-Risk-Assessment-Tool")
+
+# Read in dataset from Younger Weather station for 1 week in Feb
+Feb.week <- read.csv("data/Younger-Week-Dataset.csv")
 
 # Formatting Date and creating separate YYYY MM DD, and HH columns
-Date.format <- as.POSIXct(CD.Jan.hourly$Date.MM.DD.YYYY, format = "%m-%d-%Y")
-Time.format <- as.POSIXct(CD.Jan.hourly$Time.hh.mm, format = "%H:%M")
-CD.yr <- format(Date.format, format="%Y")
-CD.mm <- format(Date.format, format="%m")
-CD.dd <- format(Date.format, format="%d")
-CD.hh <- format(Time.format, format="%H")
+Date.format <- as.POSIXct(Feb.week$time, format = "%m/%d/%Y %H:%M")
+
+yr <- format(Date.format, format="%Y")
+mm <- format(Date.format, format="%m")
+dd <- format(Date.format, format="%d")
+hh <- format(Date.format, format="%H")
 
 # Extracting key data from dataset and inputting relevant geographical 
 # information that is missing
-CD.data <- data.frame(36.9741, -122.0307, CD.yr, CD.mm, CD.dd, CD.hh,
-                      CD.Jan.hourly$Avg.Air.Temp, CD.Jan.hourly$Rel.Humidty, 
-                      CD.Jan.hourly$Wind.Speed.m.s, CD.Jan.hourly$Precip.mm)
-colnames(CD.data) <- c('lat', 'long', 'yr', 'mon', 'day', 'hr', 'temp', 'rh',
-                       'ws', 'prec')
+data <- data.frame(36.948889, -122.066389, yr, mm, dd, hh,
+                      Feb.week$air.temp.max.degc, Feb.week$relative.humidity.max.pct, 
+                      Feb.week$wind.speed.max.ms, Feb.week$rainfall.mm, 12)
+colnames(data) <- c('lat', 'long', 'yr', 'mon', 'day', 'hr', 'temp', 'rh',
+                       'ws', 'prec', 'dmc')
+
+# Adjust convert windspeed from m/s to km/h
+data$ws <- data$ws*3.6
 
 
-# Get Fine Fuel Mositure code for all hours in January except Jan 17 @1400
+# Get Fine Fuel Mositure code every time interval of 10min
 ffmc.o = c()
-for(i in 1:(nrow(CD.data) - 1))
+sdmc.o = c()
+for(i in 1:(nrow(data)))
 {
   if(i == 1)
   {
-    ffmc.o[i] <- hffmc(CD.data[i,]) 
+    ffmc.o[i] <- hffmc(data[i,], time.step = 1/6) 
   }
   else
   {
-    ffmc.o[i] <- hffmc(CD.data[i,], ffmc_old = ffmc.o[i-1])
+    ffmc.o[i] <- hffmc(data[i,], ffmc_old = ffmc.o[i-1], time.step = 1/6)
   }
 }
 
+sdmc.o <- sdmc(data)
+
 # Obtain FFMC for Jan 17th @ 1400 given previous hours FFMC
-cd.hffmc <- hffmc(CD.data[nrow(CD.data),], ffmc.o[i])
+hffmc.o <- hffmc(data[nrow(data),], ffmc.o[i])
 
 # Getting Fire Weather Index for hour 1400 using FFMC derived above as well 
 # as the same dataset
-cd.fwi <- fwi(CD.data[nrow((CD.data)),], 
-              init = data.frame(ffmc = cd.hffmc, dmc = 6, dc = 15, lat = 55))
-cd.fwi$FWI
+fwi.o <- fwi(data[nrow((data)),], 
+              init = data.frame(ffmc = hffmc.o, dmc = 6, dc = 15, lat = 55))
+fwi.o$FWI
